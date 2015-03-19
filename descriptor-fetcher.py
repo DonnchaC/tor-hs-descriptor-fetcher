@@ -10,6 +10,7 @@ import hashlib
 import datetime
 import os
 import logging
+import errno
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
@@ -210,7 +211,11 @@ def main():
         logger.error("No onion addresses were specified")
         sys.exit(1)
 
-    os.makedirs("descriptors", exist_ok=True)
+    try:
+        os.mkdir("descriptors")
+    except OSError as e:
+        if e.errno != errno.EEXIST:
+            raise
 
     with stem.control.Controller.from_port(port=args.port) \
             as controller:
