@@ -188,6 +188,9 @@ def parse_cmd_args():
     parser.add_argument("-i", "--ip", type=str, default="127.0.0.1",
                         help="Tor controller IP address")
 
+    parser.add_argument("-t", "--tick", type=int, default=10,
+                        help="Fetch descriptor every tick minuntes")
+
     parser.add_argument("-p", "--port", type=int, default=9051,
                         help="Tor controller port")
 
@@ -238,7 +241,7 @@ def main():
                                       stem.control.EventType.HS_DESC_CONTENT)
 
         # Add scheduled descriptor polling
-        schedule.every(10).minutes.do(descriptor_fetch, controller, onion_list)
+        schedule.every(args.tick).minutes.do(descriptor_fetch, controller, onion_list)
 
         # Run first fetch on startup
         descriptor_fetch(controller, onion_list)
