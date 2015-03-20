@@ -146,12 +146,13 @@ def hs_desc_handler(event):
 def request_descriptor(controller, onion_address):
     logger.info("Sending HS descriptor fetch for %s.onion" % onion_address)
     response = controller.msg("HSFETCH %s" % (onion_address))
+    (response_code, divider, response_content) = response.content()[0]
     if not response.is_ok():
-        if response.code == "552":
-            raise stem.InvalidRequest(response.code, response.message)
+        if response_code == "552":
+            raise stem.InvalidRequest(response_code, response_content)
         else:
             raise stem.ProtocolError("HSFETCH returned unexpected response "
-                                     "code: %s" % response.code)
+                                     "code: %s" % response_code)
 
 
 def descriptor_fetch(controller, onion_list):
