@@ -10,6 +10,7 @@ import hashlib
 import datetime
 import os
 import logging
+import errno
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
@@ -145,12 +146,13 @@ def hs_desc_handler(event):
 def request_descriptor(controller, onion_address):
     logger.info("Sending HS descriptor fetch for %s.onion" % onion_address)
     response = controller.msg("HSFETCH %s" % (onion_address))
+    (response_code, divider, response_content) = response.content()[0]
     if not response.is_ok():
-        if response.code == "552":
-            raise stem.InvalidRequest(response.code, response.message)
+        if response_code == "552":
+            raise stem.InvalidRequest(response_code, response_content)
         else:
             raise stem.ProtocolError("HSFETCH returned unexpected response "
-                                     "code: %s" % response.code)
+                                     "code: %s" % response_code)
 
 
 def descriptor_fetch(controller, onion_list):
@@ -186,6 +188,9 @@ def parse_cmd_args():
     parser.add_argument("-i", "--ip", type=str, default="127.0.0.1",
                         help="Tor controller IP address")
 
+    parser.add_argument("-t", "--tick", type=int, default=10,
+                        help="Fetch descriptor every tick minuntes")
+
     parser.add_argument("-p", "--port", type=int, default=9051,
                         help="Tor controller port")
 
@@ -210,7 +215,11 @@ def main():
         logger.error("No onion addresses were specified")
         sys.exit(1)
 
-    os.makedirs("descriptors", exist_ok=True)
+    try:
+        os.mkdir("descriptors")
+    except OSError as e:
+        if e.errno != errno.EEXIST:
+            raise
 
     with stem.control.Controller.from_port(port=args.port) \
             as controller:
@@ -232,7 +241,7 @@ def main():
                                       stem.control.EventType.HS_DESC_CONTENT)
 
         # Add scheduled descriptor polling
-        schedule.every(10).minutes.do(descriptor_fetch, controller, onion_list)
+        schedule.every(args.tick).minutes.do(descriptor_fetch, controller, onion_list)
 
         # Run first fetch on startup
         descriptor_fetch(controller, onion_list)
