@@ -118,15 +118,21 @@ def hs_desc_handler(event):
             logger.debug("Empty descriptor received for %s" % event.address)
             return
 
+        parsed_descriptor = stem.descriptor.hidden_service_descriptor.\
+            HiddenServiceDescriptor(descriptor_text, validate=True)
+        introduction_points = parsed_descriptor.introduction_points()
+
         descriptor_hash = hashlib.sha1(descriptor_text).hexdigest()
         descriptor_path = os.path.join("descriptors", descriptor_hash)
 
         if not os.path.isfile(descriptor_path):
             with open(descriptor_path, 'wb') as descriptor_file:
                 descriptor_file.write(descriptor_text)
-            logger.info("Storing new descriptor for HS %s" % event.address)
+            logger.info("Storing new descriptor with %d introduction points "
+                        "for HS %s", len(introduction_points), event.address)
         else:
-            logger.info("Received matching descriptor for HS %s" %
+            logger.info("Received matching descriptor with %d introduction "
+                        "points for HS %s", len(introduction_points),
                         event.address)
 
         # Save the data about returned descriptor to DB
